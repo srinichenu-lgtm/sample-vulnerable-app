@@ -1,7 +1,7 @@
 # NOTE: contains intentional security test patterns for SAST/SCA/IaC scanning.
 import sqlite3
 import subprocess
-import pickle
+import ast  # Using ast.literal_eval instead of pickle for safe deserialization
 import os
 
 # hardcoded API token (Issue 1)
@@ -31,8 +31,12 @@ def run_shell(command):
     return subprocess.getoutput(command)
 
 def deserialize_blob(blob):
-    # insecure deserialization of untrusted data (Issue 5)
-    return pickle.loads(blob)
+    # Fixed: Using ast.literal_eval for safe deserialization of basic Python literals
+    # This only allows safe literals like strings, numbers, tuples, lists, dicts, booleans, and None
+    try:
+        return ast.literal_eval(blob.decode() if isinstance(blob, bytes) else blob)
+    except (ValueError, SyntaxError):
+        raise ValueError("Invalid or unsafe data format")
 
 if __name__ == "__main__":
     # seed some data
